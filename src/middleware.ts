@@ -1,11 +1,18 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/midia-pipe', '/'])
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/sign-up(.*)"
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, redirectToSignIn } = await auth();
+  const pathname = req.nextUrl.pathname;
+
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
 
   if (isPublicRoute(req)) {
     return NextResponse.next();
@@ -15,9 +22,10 @@ export default clerkMiddleware(async (auth, req) => {
     return redirectToSignIn();
   }
 
+  const baseUrl = req.nextUrl.origin;
 
   try {
-    const res = await fetch(`/api/faces/${userId}`, {
+    const res = await fetch(`${baseUrl}/api/users/${userId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -26,19 +34,19 @@ export default clerkMiddleware(async (auth, req) => {
 
     if (!res.ok) {
       console.error("Erro ao verificar rosto registrado:", res.statusText);
-      return NextResponse.redirect(new URL("/", req.url));
+      return NextResponse.redirect(new URL("/cadastro", req.url));
     }
 
     const data = await res.json();
     console.log(data);
 
-    if (data.isRegistered === false) {
-      return NextResponse.redirect(new URL("/register-face", req.url));
+    if (data.face_embeddings === false) {
+      return NextResponse.redirect(new URL("/cadastro", req.url));
     }
 
   } catch (error) {
     console.error("Erro de rede:", error);
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/cadastro", req.url));
   }
 
   return NextResponse.next();

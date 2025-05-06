@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useUser } from "@clerk/nextjs"; // Importa o hook do Clerk
 
 const CaptureAndUpload: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [progress, setProgress] = useState<number>(0);
   const totalImages = 20;
-  const captureInterval = 1500; // 1.5 segundos
+  const captureInterval = 1500;
+  const { user } = useUser(); // Obtem dados do usuário Clerk
 
   useEffect(() => {
     const startCamera = async () => {
@@ -30,7 +32,7 @@ const CaptureAndUpload: React.FC = () => {
         try {
           const video = videoRef.current;
           const canvas = canvasRef.current;
-          if (video && canvas) {
+          if (video && canvas && user?.id) {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
@@ -39,10 +41,11 @@ const CaptureAndUpload: React.FC = () => {
               canvas.toBlob(async (blob) => {
                 if (blob) {
                   const formData = new FormData();
-                  formData.append('image', blob, `image_${imagesCaptured}.jpg`);
+                  formData.append('imagem', blob, `image_${imagesCaptured}.jpg`);
+                  formData.append('clerk_id', user.id); // Inclui o ID do usuário Clerk
 
                   // Enviar para o backend
-                  await fetch('/api/upload', {
+                  await fetch('/api/faces', {
                     method: 'POST',
                     body: formData,
                   });
@@ -67,8 +70,8 @@ const CaptureAndUpload: React.FC = () => {
       setTimeout(captureAndSendImage, captureInterval);
     };
 
-    startCamera();
-  }, []);
+    if (user) startCamera();
+  }, [user]);
 
   return (
     <div>
