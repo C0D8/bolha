@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import {
   FilesetResolver,
   FaceDetector,
-  DrawingUtils,
 } from "@mediapipe/tasks-vision";
 
 export default function FaceDetectPage() {
