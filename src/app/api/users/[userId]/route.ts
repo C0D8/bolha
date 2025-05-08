@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function GET(req: NextRequest, context: { params: { userId: string } }) {
-  const { userId } = context.params;
+type Params = {
+  params: {
+    userId: string;
+  };
+};
+
+export async function GET(req: NextRequest, { params }: Params) {
+  const userId = params.userId;
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
 
@@ -15,18 +21,19 @@ export async function GET(req: NextRequest, context: { params: { userId: string 
     });
 
     if (!res.ok) {
-      console.error("Erro ao verificar rosto registrado:", res.statusText);
+      const message = await res.text();
+      console.error("Erro ao verificar rosto registrado:", message);
       return NextResponse.json(
         { error: 'Erro ao verificar rosto registrado' },
-        { status: 500 }
+        { status: res.status }
       );
     }
 
     const data = await res.json();
     return NextResponse.json(data);
 
-  } catch (error) {
-    console.error("Erro de rede:", error);
+  } catch (error: any) {
+    console.error("Erro de rede:", error?.message || error);
     return NextResponse.json({ error: 'Erro de rede' }, { status: 500 });
   }
 }

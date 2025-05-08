@@ -13,6 +13,7 @@ export default function FaceDetectPage() {
   useEffect(() => {
     let detector: FaceDetector;
     let animationFrameId: number;
+    let intervalId: NodeJS.Timeout;
 
     const init = async () => {
       const vision = await FilesetResolver.forVisionTasks(
@@ -34,6 +35,31 @@ export default function FaceDetectPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       video.srcObject = stream;
       await video.play();
+
+      // Função para enviar a imagem ao backend
+      const sendImageToBackend = async () => {
+        if (!canvas) return;
+
+        // Captura a imagem do canvas como base64
+        const imageData = canvas.toDataURL("image/jpeg");
+
+        try {
+          // Envia a imagem para a rota faces/detections
+          await fetch("http://seu-backend.com/faces/detections", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ image: imageData }),
+          });
+          console.log("Imagem enviada com sucesso!");
+        } catch (error) {
+          console.error("Erro ao enviar imagem:", error);
+        }
+      };
+
+      // Configura o intervalo para enviar a imagem a cada 5 segundos
+      intervalId = setInterval(sendImageToBackend, 2000);
 
       const draw = async () => {
         if (!video || video.readyState < 2) {
@@ -83,6 +109,7 @@ export default function FaceDetectPage() {
 
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      if (intervalId) clearInterval(intervalId); // Limpa o intervalo ao desmontar
     };
   }, []);
 

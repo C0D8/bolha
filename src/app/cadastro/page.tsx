@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useUser } from "@clerk/nextjs"; // Importa o hook do Clerk
+import { useUser } from "@clerk/nextjs";
 
 const CaptureAndUpload: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [progress, setProgress] = useState<number>(0);
-  const totalImages = 20;
+  const [isCapturing, setIsCapturing] = useState<boolean>(false);
+  const totalImages = 5;
   const captureInterval = 1500;
-  const { user } = useUser(); // Obtem dados do usuário Clerk
+  const { user } = useUser();
 
   useEffect(() => {
     const startCamera = async () => {
@@ -18,14 +19,19 @@ const CaptureAndUpload: React.FC = () => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
-          startCapturing();
         }
       } catch (error) {
         console.error('Erro ao acessar a câmera:', error);
       }
     };
 
-    const startCapturing = () => {
+    if (user) {
+      startCamera();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (isCapturing) {
       let imagesCaptured = 0;
 
       const captureAndSendImage = async () => {
@@ -42,10 +48,9 @@ const CaptureAndUpload: React.FC = () => {
                 if (blob) {
                   const formData = new FormData();
                   formData.append('imagem', blob, `image_${imagesCaptured}.jpg`);
-                  formData.append('clerk_id', user.id); // Inclui o ID do usuário Clerk
+                  formData.append('clerk_id', user.id);
 
-                  // Enviar para o backend
-                  await fetch('/api/faces', {
+                  await fetch('/faces', {
                     method: 'POST',
                     body: formData,
                   });
@@ -68,16 +73,80 @@ const CaptureAndUpload: React.FC = () => {
       };
 
       setTimeout(captureAndSendImage, captureInterval);
-    };
-
-    if (user) startCamera();
-  }, [user]);
+    }
+  }, [isCapturing, user]);
 
   return (
-    <div>
-      <video ref={videoRef} autoPlay playsInline width="640" height="480" />
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-      <div style={{ width: '100%', backgroundColor: '#ddd', marginTop: '10px' }}>
+    <div style={{ margin: 0, padding: 0 }}>
+
+<div className='w-full h-full absolute flex items-center justify-center z-10'>
+  {/* Janela oval vazada com fundo ao redor */}
+  <div
+    style={{
+      width: '20rem',
+      height: '26rem',
+      borderRadius: '50%',
+      outline: '9999px solid rgba(248, 250, 252, 0.72)',
+      backgroundColor: 'transparent',
+    }}
+  ></div>
+</div>
+
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          objectFit: "cover",
+          zIndex: 1,
+        }}
+      />
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          zIndex: 2,
+        }}
+      />
+      <button
+        onClick={() => setIsCapturing(true)}
+        disabled={isCapturing}
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          left: "20px",
+          zIndex: 15,
+          padding: "12px 24px",
+          fontSize: "16px",
+          backgroundColor: "#4caf50",
+          color: "white",
+          border: "none",
+          borderRadius: "8px",
+          cursor: isCapturing ? "not-allowed" : "pointer"
+        }}
+      >
+        {isCapturing ? 'Capturando...' : 'Iniciar'}
+      </button>
+      <div style={{
+        position: "fixed",
+        bottom: "20px",
+        right: "20px",
+        width: "200px",
+        backgroundColor: "#ddd",
+        zIndex: 15,
+        borderRadius: "8px",
+        overflow: "hidden"
+      }}>
         <div
           style={{
             width: `${progress}%`,
@@ -86,6 +155,7 @@ const CaptureAndUpload: React.FC = () => {
             textAlign: 'center',
             lineHeight: '30px',
             color: 'white',
+            transition: 'width 0.3s ease'
           }}
         >
           {Math.round(progress)}%
