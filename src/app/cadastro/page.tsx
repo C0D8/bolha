@@ -50,7 +50,7 @@ const CaptureAndUpload: React.FC = () => {
                   formData.append('imagem', blob, `image_${imagesCaptured}.jpg`);
                   formData.append('clerk_id', user.id);
 
-                  await fetch('/faces', {
+                  await fetch('/api/faces', {
                     method: 'POST',
                     body: formData,
                   });

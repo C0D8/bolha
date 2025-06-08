@@ -39,24 +39,30 @@ export default function FaceDetectPage() {
       // Função para enviar a imagem ao backend
       const sendImageToBackend = async () => {
         if (!canvas) return;
-
-        // Captura a imagem do canvas como base64
-        const imageData = canvas.toDataURL("image/jpeg");
-
-        try {
-          // Envia a imagem para a rota faces/detections
-          await fetch("http://seu-backend.com/faces/detections", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ image: imageData }),
-          });
-          console.log("Imagem enviada com sucesso!");
-        } catch (error) {
-          console.error("Erro ao enviar imagem:", error);
-        }
+      
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+      
+          const formData = new FormData();
+          formData.append("imagem", blob, "canvas_image.jpg");
+      
+          try {
+            const res = await fetch("/api/faces/recognition", {
+              method: "POST",
+              body: formData,
+            });
+      
+            if (!res.ok) {
+              throw new Error("Erro na resposta do servidor");
+            }
+      
+            console.log("Imagem enviada com sucesso!");
+          } catch (error) {
+            console.error("Erro ao enviar imagem:", error);
+          }
+        }, "image/jpeg");
       };
+      
 
       // Configura o intervalo para enviar a imagem a cada 5 segundos
       intervalId = setInterval(sendImageToBackend, 2000);

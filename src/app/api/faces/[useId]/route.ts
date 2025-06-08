@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 export async function GET(req: Request): Promise<NextResponse> {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
+    // const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
+    const apiUrl = "http://localhost:8000/api";
     
     try {
         const res = await fetch(`${apiUrl}/users/faces/${userId}`, {
