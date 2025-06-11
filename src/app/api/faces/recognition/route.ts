@@ -4,8 +4,8 @@ export async function POST(req: Request): Promise<NextResponse> {
   const formData = await req.formData();
 
   const image = formData.get("imagem") as File | null;
-  // const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
-  const apiUrl = "http://localhost:8000/api";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
+  // const apiUrl = "http://localhost:8000/api";
 
   if (!image) {
     return NextResponse.json({ error: "Imagem ou clerk_id não fornecido." }, { status: 400 });
@@ -14,6 +14,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   try {
     const backendForm = new FormData();
     backendForm.append("file", image, image.name);
+    console.log(`${apiUrl}/faces/recognition`);
 
     const res = await fetch(`${apiUrl}/faces/recognition`, {
       method: "POST",
@@ -26,6 +27,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
 
     const data = await res.json();
+    // console.log(data);
     return NextResponse.json(data);
 
   } catch (error) {
