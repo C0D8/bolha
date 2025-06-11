@@ -10,8 +10,8 @@ type Params = {
 export async function GET(req: NextRequest, { params }: Params) {
   const userId = params.userId;
 
-  // const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
-  const apiUrl =  "http://localhost:8000/api";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
+  // const apiUrl =  "http://localhost:8000/api";
 
   try {
     const res = await fetch(`${apiUrl}/users/${userId}`, {

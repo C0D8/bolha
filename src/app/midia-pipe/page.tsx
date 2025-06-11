@@ -108,54 +108,54 @@ export default function FaceDetectPage() {
         // Se precisar de ajuste, adicione imageWidth/imageHeight ao objeto do backend
         // ...existing code...
 
-        // TESTE: Desenhar um retângulo e texto fixo para garantir que o canvas está desenhando
-        ctx.save();
-        ctx.strokeStyle = "#00f";
-        ctx.lineWidth = 4;
-        ctx.strokeRect(20, 20, 200, 100);
-        ctx.font = "32px Arial";
-        ctx.fillStyle = "#00f";
-        ctx.fillText("DEBUG CANVAS", 30, 80);
-        ctx.restore();
+        // // TESTE: Desenhar um retângulo e texto fixo para garantir que o canvas está desenhando
+        // ctx.save();
+        // ctx.strokeStyle = "#00f";
+        // ctx.lineWidth = 4;
+        // ctx.strokeRect(20, 20, 200, 100);
+        // ctx.font = "32px Arial";
+        // ctx.fillStyle = "#00f";
+        // ctx.fillText("DEBUG CANVAS", 30, 80);
+        // ctx.restore();
 
         // Desenhar retângulos do backend
-        if (backendData && Array.isArray(backendData)) {
-          ctx.save();
-          for (const item of backendData) {
-            const [x, y, w, h] = item.coords;
-            let x1 = x * scaleX;
-            let y1 = y * scaleY;
-            let x2 = (x + w) * scaleX;
-            let y2 = (y + h) * scaleY;
+        // if (backendData && Array.isArray(backendData)) {
+        //   ctx.save();
+        //   for (const item of backendData) {
+        //     const [x, y, w, h] = item.coords;
+        //     let x1 = x * scaleX;
+        //     let y1 = y * scaleY;
+        //     let x2 = (x + w) * scaleX;
+        //     let y2 = (y + h) * scaleY;
 
-            const minX = Math.min(x1, x2);
-            const maxX = Math.max(x1, x2);
-            const minY = Math.min(y1, y2);
-            const maxY = Math.max(y1, y2);
-            const width = maxX - minX;
-            const height = maxY - minY;
+        //     const minX = Math.min(x1, x2);
+        //     const maxX = Math.max(x1, x2);
+        //     const minY = Math.min(y1, y2);
+        //     const maxY = Math.max(y1, y2);
+        //     const width = maxX - minX;
+        //     const height = maxY - minY;
 
-            if (
-              isNaN(minX) || isNaN(minY) || isNaN(maxX) || isNaN(maxY) ||
-              width <= 0 || height <= 0
-            ) {
-              continue;
-            }
+        //     if (
+        //       isNaN(minX) || isNaN(minY) || isNaN(maxX) || isNaN(maxY) ||
+        //       width <= 0 || height <= 0
+        //     ) {
+        //       continue;
+        //     }
 
-            ctx.strokeStyle = "red";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(minX, minY, width, height);
+        //     ctx.strokeStyle = "red";
+        //     ctx.lineWidth = 2;
+        //     ctx.strokeRect(minX, minY, width, height);
 
-            // Desenhar nome e confiança
-            const label = `${item.name} (${item.confidence.toFixed(2)})`;
-            const fontSize = Math.max(12, Math.floor(height * 0.2));
-            ctx.font = `${fontSize}px Arial`;
-            ctx.fillStyle = "black";
-            ctx.fillText(label, minX, minY - 4);
-            ctx.fillText(item.clerk_id, minX, minY + fontSize + 2);
-          }
-          ctx.restore();
-        }
+        //     // Desenhar nome e confiança
+        //     const label = `${item.name} (${item.confidence.toFixed(2)})`;
+        //     const fontSize = Math.max(12, Math.floor(height * 0.2));
+        //     ctx.font = `${fontSize}px Arial`;
+        //     ctx.fillStyle = "black";
+        //     ctx.fillText(label, minX, minY - 4);
+        //     ctx.fillText(item.clerk_id, minX, minY + fontSize + 2);
+        //   }
+        //   ctx.restore();
+        // }
 
         // Desenhar detecções do frontend e corresponder com backend
         if (faces.detections.length && backendData && Array.isArray(backendData)) {
@@ -171,14 +171,14 @@ export default function FaceDetectPage() {
             const frontendCenterX = boundingBox.originX + boundingBox.width / 2;
             const frontendCenterY = boundingBox.originY + boundingBox.height / 2;
 
-            ctx.strokeStyle = "green";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(
-              boundingBox.originX,
-              boundingBox.originY,
-              boundingBox.width,
-              boundingBox.height
-            );
+            // ctx.strokeStyle = "green";
+            // ctx.lineWidth = 2;
+            // ctx.strokeRect(
+            //   boundingBox.originX,
+            //   boundingBox.originY,
+            //   boundingBox.width,
+            //   boundingBox.height
+            // );
 
             let closestIdx = -1;
             let minDistance = Infinity;
@@ -221,12 +221,12 @@ export default function FaceDetectPage() {
               const padding = 6;
               // Centralizar dentro do quadrado verde
               const xText = boundingBox.originX + boundingBox.width / 2 - maxWidth / 2 - padding / 2;
-              const yText = boundingBox.originY + 2; // um pouco abaixo do topo do quadrado verde
-              ctx.fillStyle = "rgba(255,255,255,0.85)";
-              ctx.fillRect(xText, yText, maxWidth + padding, fontSize * 2 + 8);
+              const yText = boundingBox.originY - 2; // um pouco abaixo do topo do quadrado verde
+              // ctx.fillStyle = "rgba(255,255,255,0.85)";
+              // ctx.fillRect(xText, yText, maxWidth + padding, fontSize * 2 + 8);
               ctx.fillStyle = "#111";
               ctx.fillText(label, xText + padding / 2, yText + 2);
-              ctx.fillText(item.clerk_id, xText + padding / 2, yText + fontSize + 4);
+              // ctx.fillText(item.clerk_id, xText + padding / 2, yText + fontSize + 4);
             }
           }
           ctx.restore();
