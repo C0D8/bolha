@@ -1,30 +1,62 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  FilesetResolver,
-  FaceDetector,
-} from "@mediapipe/tasks-vision";
+import { FilesetResolver, FaceDetector } from "@mediapipe/tasks-vision";
+import { useRouter } from "next/navigation";
 
 export default function FaceDetectPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const MAX_ALLOWED_DISTANCE = 200;
-  // Novo tipo para backendData
-  const [backendData, setBackendData] = useState<null | Array<{
-    name: string;
-    confidence: number;
-    coords: [number, number, number, number];
-    face: string;
-    clerk_id: string;
-  }>>(null);
-
+  const [backendData, setBackendData] = useState<
+    null | Array<{
+      name: string;
+      confidence: number;
+      coords: [number, number, number, number];
+      face: string;
+      clerk_id: string;
+    }>
+  >(null);
   const backendDataRef = useRef<typeof backendData>(null);
+  // Move boundingBoxesRef to the top level
+  const boundingBoxesRef = useRef<
+    Array<{
+      boundingBox: { originX: number; originY: number; width: number; height: number };
+      clerk_id: string;
+      confidence: number;
+    }>
+  >([]);
+  const router = useRouter();
 
   useEffect(() => {
     let detector: FaceDetector;
     let animationFrameId: number;
     let intervalId: NodeJS.Timeout;
+
+    const canvas = canvasRef.current!;
+    const handleCanvasClick = (event: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clickX = (event.clientX - rect.left) * scaleX;
+      const clickY = (event.clientY - rect.top) * scaleY;
+
+      for (const box of boundingBoxesRef.current) {
+        const { originX, originY, width, height } = box.boundingBox;
+        const { clerk_id, confidence } = box;
+        if (
+          clickX >= originX &&
+          clickX <= originX + width &&
+          clickY >= originY &&
+          clickY <= originY + height &&
+          confidence >= 0 &&
+          confidence <= 0.8
+        ) {
+          router.push(`/users/${clerk_id}`);
+          break;
+        }
+      }
+    };
 
     const init = async () => {
       const vision = await FilesetResolver.forVisionTasks(
@@ -40,17 +72,17 @@ export default function FaceDetectPage() {
       });
 
       const video = videoRef.current!;
-      const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d")!;
 
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       video.srcObject = stream;
       await video.play();
 
+      canvas.addEventListener("click", handleCanvasClick);
+
       const sendImageToBackend = async () => {
         if (!canvas || !video) return;
 
-        // Desenhar apenas o frame do vídeo no canvas (sem overlays)
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext("2d")!;
@@ -72,10 +104,9 @@ export default function FaceDetectPage() {
             if (!res.ok) throw new Error("Erro na resposta do servidor");
 
             const data = await res.json();
-            // Se vier data.recognitions, use isso como backendData
             const recognitions = Array.isArray(data.recognitions) ? data.recognitions : data;
             backendDataRef.current = recognitions;
-            setBackendData(recognitions); // Garante atualização do estado
+            setBackendData(recognitions);
           } catch (error) {
             console.error("Erro ao enviar imagem:", error);
           }
@@ -99,65 +130,11 @@ export default function FaceDetectPage() {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         const backendData = backendDataRef.current;
-        console.log("Backend Data:", backendData);
+        boundingBoxesRef.current = [];
 
-        // Calcular fatores de escala
         let scaleX = 4;
         let scaleY = 4;
-        // Supondo que a imagem do backend tem o mesmo tamanho do canvas
-        // Se precisar de ajuste, adicione imageWidth/imageHeight ao objeto do backend
-        // ...existing code...
 
-        // // TESTE: Desenhar um retângulo e texto fixo para garantir que o canvas está desenhando
-        // ctx.save();
-        // ctx.strokeStyle = "#00f";
-        // ctx.lineWidth = 4;
-        // ctx.strokeRect(20, 20, 200, 100);
-        // ctx.font = "32px Arial";
-        // ctx.fillStyle = "#00f";
-        // ctx.fillText("DEBUG CANVAS", 30, 80);
-        // ctx.restore();
-
-        // Desenhar retângulos do backend
-        // if (backendData && Array.isArray(backendData)) {
-        //   ctx.save();
-        //   for (const item of backendData) {
-        //     const [x, y, w, h] = item.coords;
-        //     let x1 = x * scaleX;
-        //     let y1 = y * scaleY;
-        //     let x2 = (x + w) * scaleX;
-        //     let y2 = (y + h) * scaleY;
-
-        //     const minX = Math.min(x1, x2);
-        //     const maxX = Math.max(x1, x2);
-        //     const minY = Math.min(y1, y2);
-        //     const maxY = Math.max(y1, y2);
-        //     const width = maxX - minX;
-        //     const height = maxY - minY;
-
-        //     if (
-        //       isNaN(minX) || isNaN(minY) || isNaN(maxX) || isNaN(maxY) ||
-        //       width <= 0 || height <= 0
-        //     ) {
-        //       continue;
-        //     }
-
-        //     ctx.strokeStyle = "red";
-        //     ctx.lineWidth = 2;
-        //     ctx.strokeRect(minX, minY, width, height);
-
-        //     // Desenhar nome e confiança
-        //     const label = `${item.name} (${item.confidence.toFixed(2)})`;
-        //     const fontSize = Math.max(12, Math.floor(height * 0.2));
-        //     ctx.font = `${fontSize}px Arial`;
-        //     ctx.fillStyle = "black";
-        //     ctx.fillText(label, minX, minY - 4);
-        //     ctx.fillText(item.clerk_id, minX, minY + fontSize + 2);
-        //   }
-        //   ctx.restore();
-        // }
-
-        // Desenhar detecções do frontend e corresponder com backend
         if (faces.detections.length && backendData && Array.isArray(backendData)) {
           ctx.save();
           for (const face of faces.detections) {
@@ -170,15 +147,6 @@ export default function FaceDetectPage() {
 
             const frontendCenterX = boundingBox.originX + boundingBox.width / 2;
             const frontendCenterY = boundingBox.originY + boundingBox.height / 2;
-
-            // ctx.strokeStyle = "green";
-            // ctx.lineWidth = 2;
-            // ctx.strokeRect(
-            //   boundingBox.originX,
-            //   boundingBox.originY,
-            //   boundingBox.width,
-            //   boundingBox.height
-            // );
 
             let closestIdx = -1;
             let minDistance = Infinity;
@@ -210,23 +178,24 @@ export default function FaceDetectPage() {
               backendData[closestIdx].confidence <= 0.8
             ) {
               const item = backendData[closestIdx];
+              boundingBoxesRef.current.push({
+                boundingBox,
+                clerk_id: item.clerk_id,
+                confidence: item.confidence,
+              });
+
               const label = `${item.name} (${item.confidence.toFixed(2)})`;
               const fontSize = Math.max(16, Math.floor(boundingBox.height * 0.22));
               ctx.font = `${fontSize}px Arial`;
               ctx.textBaseline = "top";
-              // Fundo branco translúcido dentro do quadrado verde
               const labelWidth = ctx.measureText(label).width;
               const clerkWidth = ctx.measureText(item.clerk_id).width;
               const maxWidth = Math.max(labelWidth, clerkWidth);
               const padding = 6;
-              // Centralizar dentro do quadrado verde
               const xText = boundingBox.originX + boundingBox.width / 2 - maxWidth / 2 - padding / 2;
-              const yText = boundingBox.originY - 2; // um pouco abaixo do topo do quadrado verde
-              // ctx.fillStyle = "rgba(255,255,255,0.85)";
-              // ctx.fillRect(xText, yText, maxWidth + padding, fontSize * 2 + 8);
+              const yText = boundingBox.originY - 2;
               ctx.fillStyle = "#111";
               ctx.fillText(label, xText + padding / 2, yText + 2);
-              // ctx.fillText(item.clerk_id, xText + padding / 2, yText + fontSize + 4);
             }
           }
           ctx.restore();
@@ -243,6 +212,7 @@ export default function FaceDetectPage() {
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       if (intervalId) clearInterval(intervalId);
+      if (canvas) canvas.removeEventListener("click", handleCanvasClick);
     };
   }, []);
 
