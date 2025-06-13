@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation"; // Importe useRouter de next/navigation
 import { useUser } from "@clerk/nextjs";
+import { FaArrowLeft, FaCamera, FaHome } from "react-icons/fa"; // Use FaArrowLeft para "voltar"
 
 type User = {
   username: string;
@@ -10,13 +11,14 @@ type User = {
 };
 
 type Follower = {
-  id?: string; // Optional to match API response
+  id?: string;
   username: string;
   clerk_id: string;
 };
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams();
+  const router = useRouter(); // Use o hook useRouter
   const clerkId = Array.isArray(id) ? id[0] : id || "";
   const [userPerfil, setUser] = useState<User | null>(null);
   const [followers, setFollowers] = useState<Follower[]>([]);
@@ -46,16 +48,15 @@ const ProfilePage: React.FC = () => {
         if (!followersRes.ok) {
           throw new Error(followersData.error || "Erro ao buscar seguidores");
         }
-        setFollowers(followersData.followers || []); // Fallback to empty array
+        setFollowers(followersData.followers || []);
 
         const followingRes = await fetch(`/api/users/${clerkId}/following`);
         const followingData = await followingRes.json();
         if (!followingRes.ok) {
           throw new Error(followingData.error || "Erro ao buscar seguindo");
         }
-        setFollowing(followingData.following || []); // Fallback to empty array
+        setFollowing(followingData.following || []);
 
-        // Verifica se o usuário logado já segue o perfil
         setIsFollowing(
           Array.isArray(followersData.followers) &&
             followersData.followers.some((f: Follower) => f.clerk_id === user?.id)
@@ -92,7 +93,6 @@ const ProfilePage: React.FC = () => {
       }
 
       setIsFollowing(true);
-      // Atualiza seguidores
       const followersRes = await fetch(`/api/users/${clerkId}/followers`);
       const followersData = await followersRes.json();
       if (followersRes.ok) {
@@ -103,6 +103,10 @@ const ProfilePage: React.FC = () => {
     } finally {
       setFollowLoading(false);
     }
+  };
+
+  const handleBackClick = () => {
+    router.back(); // Volta para a página anterior no histórico
   };
 
   if (loading) return <div>Carregando...</div>;
@@ -136,6 +140,30 @@ const ProfilePage: React.FC = () => {
           <li key={f.clerk_id}>{f.username}</li>
         ))}
       </ul>
+      <button
+        onClick={handleBackClick}
+        style={{
+          position: "absolute",
+          bottom: 60,
+          left: "50%",
+          transform: "translateX(-50%)",
+          backgroundColor: "#007bff",
+          color: "#fff",
+          border: "none",
+          borderRadius: "50%",
+          width: 50,
+          height: 50,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+          zIndex: 3,
+        }}
+        title="Voltar"
+      >
+        <FaArrowLeft size={24} /> {/* Ícone mais apropriado para "voltar" */}
+      </button>
     </div>
   );
 };

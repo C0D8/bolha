@@ -1,103 +1,171 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { FaCamera } from "react-icons/fa";
+
+type User = {
+  username: string;
+  clerk_id: string;
+};
+
+type Follower = {
+  id?: string;
+  username: string;
+  clerk_id: string;
+};
+
+const ProfilePage: React.FC = () => {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+  const clerkId = user?.id || "";
+  const [userPerfil, setUser] = useState<User | null>(null);
+  const [followers, setFollowers] = useState<Follower[]>([]);
+  const [following, setFollowing] = useState<Follower[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  useEffect(() => {
+    if (!clerkId || !isLoaded) {
+      return;
+    }
+
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        const userRes = await fetch(`/api/users/${clerkId}`);
+        const userData = await userRes.json();
+        if (!userRes.ok) {
+          throw new Error(userData.error || "Erro ao buscar usuário");
+        }
+        setUser(userData);
+
+        const followersRes = await fetch(`/api/users/${clerkId}/followers`);
+        const followersData = await followersRes.json();
+        if (!followersRes.ok) {
+          throw new Error(followersData.error || "Erro ao buscar seguidores");
+        }
+        setFollowers(followersData.followers || []);
+
+        const followingRes = await fetch(`/api/users/${clerkId}/following`);
+        const followingData = await followingRes.json();
+        if (!followingRes.ok) {
+          throw new Error(followingData.error || "Erro ao buscar seguindo");
+        }
+        setFollowing(followingData.following || []);
+
+        setIsFollowing(
+          Array.isArray(followersData.followers) &&
+            followersData.followers.some((f: Follower) => f.clerk_id === user?.id)
+        );
+      } catch (err) {
+        console.error("Erro ao carregar perfil:", err);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [clerkId, user, isLoaded]);
+
+  const handleFollow = async () => {
+    setFollowLoading(true);
+    try {
+      if (!clerkId || !user) {
+        console.error("IDs de usuário inválidos");
+        return;
+      }
+      const res = await fetch(`/api/users/${clerkId}/follow`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ clerk_id: user.id }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erro ao seguir usuário");
+      }
+
+      setIsFollowing(true);
+      const followersRes = await fetch(`/api/users/${clerkId}/followers`);
+      const followersData = await followersRes.json();
+      if (followersRes.ok) {
+        setFollowers(followersData.followers || []);
+      }
+    } catch (err) {
+      console.error("Erro ao seguir:", err);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const handleCameraClick = () => {
+    router.push("/midia-pipe");
+  };
+
+  if (loading) return <div>Carregando...</div>;
+  if (!userPerfil || !clerkId) return <div>Usuário não encontrado.</div>;
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div style={{ maxWidth: 600, margin: "0 auto", padding: 24, position: "relative", height: "90vh" }}>
+      <h1>Perfil de {userPerfil.username}</h1>
+      <p>
+        <strong>ID:</strong> {userPerfil.clerk_id}
+      </p>
+      {isLoaded && user?.id !== clerkId && (
+        <button
+          onClick={handleFollow}
+          disabled={isFollowing || followLoading}
+          style={{ marginBottom: 16 }}
+        >
+          {isFollowing ? "Seguindo" : followLoading ? "Seguindo..." : "Seguir"}
+        </button>
+      )}
+      <hr />
+      <h2>Seguidores ({followers.length})</h2>
+      <ul>
+        {followers.map((f) => (
+          <li key={f.clerk_id}>{f.username}</li>
+        ))}
+      </ul>
+      <h2>Seguindo ({following.length})</h2>
+      <ul>
+        {following.map((f) => (
+          <li key={f.clerk_id}>{f.username}</li>
+        ))}
+      </ul>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      <button
+        onClick={handleCameraClick}
+        style={{
+          position: "absolute",
+          bottom: 60, // Ajustado para ficar mais baixo
+          left: "50%",
+          transform: "translateX(-50%)",
+          backgroundColor: "#007bff",
+          color: "#fff",
+          border: "none",
+          borderRadius: "50%",
+          width: 50,
+          height: 50,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+        }}
+        title="Ir para Midia Pipe"
+      >
+        <FaCamera size={24} />
+      </button>
     </div>
   );
-}
+};
+
+export default ProfilePage;

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FilesetResolver, FaceDetector } from "@mediapipe/tasks-vision";
 import { useRouter } from "next/navigation";
+import { FaCamera, FaHome } from "react-icons/fa";
 
 export default function FaceDetectPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -18,7 +19,6 @@ export default function FaceDetectPage() {
     }>
   >(null);
   const backendDataRef = useRef<typeof backendData>(null);
-  // Move boundingBoxesRef to the top level
   const boundingBoxesRef = useRef<
     Array<{
       boundingBox: { originX: number; originY: number; width: number; height: number };
@@ -135,7 +135,7 @@ export default function FaceDetectPage() {
         let scaleX = 4;
         let scaleY = 4;
 
-        if (faces.detections.length && backendData && Array.isArray(backendData)) {
+        if (faces.detections.length) {
           ctx.save();
           for (const face of faces.detections) {
             const boundingBox = face.boundingBox as {
@@ -151,32 +151,38 @@ export default function FaceDetectPage() {
             let closestIdx = -1;
             let minDistance = Infinity;
 
-            backendData.forEach((item, index) => {
-              const [x, y, w, h] = item.coords;
-              const x1 = x * scaleX;
-              const y1 = y * scaleY;
-              const x2 = (x + w) * scaleX;
-              const y2 = (y + h) * scaleY;
-              const backendCenterX = (x1 + x2) / 2;
-              const backendCenterY = (y1 + y2) / 2;
+            // Encontrar correspondência mais próxima no backendData
+            if (backendData && Array.isArray(backendData)) {
+              backendData.forEach((item, index) => {
+                const [x, y, w, h] = item.coords;
+                const x1 = x * scaleX;
+                const y1 = y * scaleY;
+                const x2 = (x + w) * scaleX;
+                const y2 = (y + h) * scaleY;
+                const backendCenterX = (x1 + x2) / 2;
+                const backendCenterY = (y1 + y2) / 2;
 
-              const dist = Math.hypot(
-                frontendCenterX - backendCenterX,
-                frontendCenterY - backendCenterY
-              );
+                const dist = Math.hypot(
+                  frontendCenterX - backendCenterX,
+                  frontendCenterY - backendCenterY
+                );
 
-              if (dist < minDistance) {
-                minDistance = dist;
-                closestIdx = index;
-              }
-            });
+                if (dist < minDistance) {
+                  minDistance = dist;
+                  closestIdx = index;
+                }
+              });
+            }
 
+            // Verificar se há correspondência válida
             if (
               closestIdx !== -1 &&
               minDistance < MAX_ALLOWED_DISTANCE &&
+              backendData &&
               backendData[closestIdx].confidence >= 0 &&
               backendData[closestIdx].confidence <= 0.8
             ) {
+              // Correspondência válida: exibir nome e confiança
               const item = backendData[closestIdx];
               boundingBoxesRef.current.push({
                 boundingBox,
@@ -184,18 +190,33 @@ export default function FaceDetectPage() {
                 confidence: item.confidence,
               });
 
-              const label = `${item.name} (${item.confidence.toFixed(2)})`;
+              const label = `${item.name}`;
               const fontSize = Math.max(16, Math.floor(boundingBox.height * 0.22));
               ctx.font = `${fontSize}px Arial`;
               ctx.textBaseline = "top";
               const labelWidth = ctx.measureText(label).width;
               const clerkWidth = ctx.measureText(item.clerk_id).width;
               const maxWidth = Math.max(labelWidth, clerkWidth);
-              const padding = 6;
-              const xText = boundingBox.originX + boundingBox.width / 2 - maxWidth / 2 - padding / 2;
-              const yText = boundingBox.originY - 2;
+              const padding = 0;
+              const xText = boundingBox.originX + boundingBox.width / 2;
+              const yText = boundingBox.originY - fontSize - 2;
               ctx.fillStyle = "#111";
-              ctx.fillText(label, xText + padding / 2, yText + 2);
+              ctx.fillText(label, xText + padding / 2, yText);
+            } else {
+              // Sem correspondência: exibir "No match" ao lado do rosto
+              ctx.save();
+              ctx.font = "20px Arial";
+              ctx.fillStyle = "red";
+              ctx.textBaseline = "middle";
+              const text = "No match";
+              const textWidth = ctx.measureText(text).width;
+              const xText = Math.min(
+                boundingBox.originX + boundingBox.width + 10,
+                canvas.width - textWidth - 5
+              ); // 10px à direita, evitar saída do canvas
+              const yText = boundingBox.originY + boundingBox.height / 2; // Centralizado verticalmente
+              ctx.fillText(text, xText, yText);
+              ctx.restore();
             }
           }
           ctx.restore();
@@ -215,6 +236,10 @@ export default function FaceDetectPage() {
       if (canvas) canvas.removeEventListener("click", handleCanvasClick);
     };
   }, []);
+
+   const handleCameraClick = () => {
+    router.push("/");
+  };
 
   return (
     <div
@@ -253,6 +278,32 @@ export default function FaceDetectPage() {
           zIndex: 2,
         }}
       />
+      <button
+              onClick={handleCameraClick}
+              style={{
+                position: "absolute",
+                bottom: 60, // Ajustado para ficar mais baixo
+                left: "50%",
+                transform: "translateX(-50%)",
+                backgroundColor: "#007bff",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
+                width: 50,
+                height: 50,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+                zIndex: 3,
+              }}
+              title="Ir para Midia Pipe"
+            >
+              <FaHome size={24} />
+            </button>
     </div>
+
+    
   );
 }
