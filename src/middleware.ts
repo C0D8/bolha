@@ -5,7 +5,6 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/cadastro(.*)",
-  "/midia-pipe(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -24,10 +23,10 @@ export default clerkMiddleware(async (auth, req) => {
     return redirectToSignIn();
   }
 
-  const baseUrl = req.nextUrl.origin;
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
 
   try {
-    const res = await fetch(`${baseUrl}/api/users/${userId}`, {
+    const res = await fetch(`${backendUrl}/users/${userId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -40,7 +39,7 @@ export default clerkMiddleware(async (auth, req) => {
     }
 
     const data = await res.json();
-    console.log(data);
+    console.log("Dados do usuário:", data);
 
     if (data.face_embeddings === false) {
       return NextResponse.redirect(new URL("/cadastro", req.url));
